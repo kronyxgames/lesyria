@@ -1,0 +1,9 @@
+name: Lesyria
+version: 1.0
+main: com.kronyxgames.lesyria.LesyriaPlugin
+api-version: 1.20
+
+commands:
+  home:
+    description: Teleport to or set your home
+    usage: /home [set]

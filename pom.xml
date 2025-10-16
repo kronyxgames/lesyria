@@ -18,19 +18,20 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <repositories>
+        <repository>
+            <id>papermc-repo</id>
+            <url>https://repo.papermc.io/repository/maven-public/</url>
+        </repository>
+    </repositories>
+
     <dependencies>
-        <!-- Netty for networking -->
+        <!-- Paper API for Minecraft server plugin development -->
         <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-all</artifactId>
-            <version>4.1.94.Final</version>
-        </dependency>
-        <!-- Placeholder for Minecraft server API, e.g., Paper or Spigot -->
-        <!-- Add GeyserMC for Bedrock compatibility -->
-        <dependency>
-            <groupId>org.geysermc</groupId>
-            <artifactId>geyser-api</artifactId>
-            <version>2.2.0-SNAPSHOT</version>
+            <groupId>io.papermc.paper</groupId>
+            <artifactId>paper-api</artifactId>
+            <version>1.20.4-R0.1-SNAPSHOT</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 
