@@ -10,3 +10,9 @@ commands:
   spawn:
     description: Teleport to spawn or a city
     usage: /spawn [city]
+  eco:
+    description: Economy commands
+    usage: /eco <balance|buy|sell> [args]
+  quest:
+    description: Quest commands
+    usage: /quest <start|complete> <quest_name>
