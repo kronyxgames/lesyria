@@ -7,3 +7,6 @@ commands:
   home:
     description: Teleport to or set your home
     usage: /home [set]
+  spawn:
+    description: Teleport to spawn or a city
+    usage: /spawn [city]

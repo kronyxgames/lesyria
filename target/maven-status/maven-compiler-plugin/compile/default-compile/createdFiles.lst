@@ -1,2 +1,5 @@
-com/kronyxgames/lesyria/LesyriaPlugin.class
+com/kronyxgames/lesyria/EarthWorldGenerator$EarthBiomeProvider.class
 com/kronyxgames/lesyria/HomeCommand.class
+com/kronyxgames/lesyria/SpawnCommand.class
+com/kronyxgames/lesyria/LesyriaPlugin.class
+com/kronyxgames/lesyria/EarthWorldGenerator.class
