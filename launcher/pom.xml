@@ -5,47 +5,18 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.kronyxgames</groupId>
-    <artifactId>lesyria</artifactId>
+    <artifactId>lesyria-launcher</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>Lesyria Minecraft Server</name>
-    <description>Base server for Minecraft supporting Java and Bedrock editions</description>
+    <name>Lesyria Launcher</name>
+    <description>Custom launcher for Lesyria Minecraft server</description>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
-
-    <repositories>
-        <repository>
-            <id>papermc-repo</id>
-            <url>https://repo.papermc.io/repository/maven-public/</url>
-        </repository>
-    </repositories>
-
-    <dependencies>
-        <!-- Paper API for Minecraft server plugin development -->
-        <dependency>
-            <groupId>io.papermc.paper</groupId>
-            <artifactId>paper-api</artifactId>
-            <version>1.20.4-R0.1-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-        <!-- Javalin for REST API -->
-        <dependency>
-            <groupId>io.javalin</groupId>
-            <artifactId>javalin</artifactId>
-            <version>5.6.3</version>
-        </dependency>
-        <!-- Gson for JSON -->
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>2.10.1</version>
-        </dependency>
-    </dependencies>
 
     <build>
         <plugins>
@@ -71,7 +42,7 @@
                         <configuration>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.kronyxgames.lesyria.LesyriaServer</mainClass>
+                                    <mainClass>com.kronyxgames.launcher.LesyriaLauncher</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>

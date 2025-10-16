@@ -72,6 +72,19 @@ Detailed documentation is available in the `docs/` folder:
 - [Commands Reference](docs/COMMANDS.md) - All available commands
 - [Features Overview](docs/FEATURES.md) - Detailed feature descriptions
 - [Architecture](docs/ARCHITECTURE.md) - Code structure and design
+- [Domain & Hosting](docs/DOMAIN_HOSTING.md) - Setting up play.lesyria.com and hosting
+
+## Launchers
+
+- **Java Launcher**: Basic Swing app in `launcher/` folder. Build with Maven.
+- **Electron Launcher**: Desktop app with TypeScript in `electron-launcher/` folder. Uses API for server info.
+
+## API
+
+REST API exposed on port 8080 with endpoints:
+- `/status`: Server status and player count
+- `/news`: Latest news
+- `/economy/rates`: Item prices
 
 ## Development
 

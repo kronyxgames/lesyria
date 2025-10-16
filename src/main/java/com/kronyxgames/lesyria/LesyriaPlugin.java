@@ -11,6 +11,7 @@ public class LesyriaPlugin extends JavaPlugin implements Listener {
     private EconomyManager economyManager;
     private QuestManager questManager;
     private NPCManager npcManager;
+    private APIManager apiManager;
 
     @Override
     public void onEnable() {
@@ -20,6 +21,7 @@ public class LesyriaPlugin extends JavaPlugin implements Listener {
         economyManager = new EconomyManager(this);
         questManager = new QuestManager(this);
         npcManager = new NPCManager(this);
+        apiManager = new APIManager(this);
 
         // Register commands
         this.getCommand("home").setExecutor(new HomeCommand(this));
@@ -30,6 +32,9 @@ public class LesyriaPlugin extends JavaPlugin implements Listener {
         // Register events
         getServer().getPluginManager().registerEvents(this, this);
 
+        // Start API on port 8080
+        apiManager.startAPI(8080);
+
         // Spawn initial NPCs
         spawnInitialNPCs();
     }
@@ -37,6 +42,7 @@ public class LesyriaPlugin extends JavaPlugin implements Listener {
     @Override
     public void onDisable() {
         // Plugin shutdown logic
+        apiManager.stopAPI();
         getLogger().info("Lesyria plugin disabled!");
     }
 
