@@ -1,0 +1,78 @@
+name: Lesyria
+version: '${project.version}'
+main: com.kronyxgames.lesyria.LesyriaPlugin
+api-version: '26.2'
+author: Kronyx Games Studios
+description: MMORPG sandbox PvP / territorial / politique
+website: https://lesyria.com
+load: POSTWORLD
+
+commands:
+  lesyria:
+    description: Commandes principales Lesyria
+    usage: /lesyria <help|version|reload>
+    aliases: [lsr]
+  spawn:
+    description: Teleportation au spawn ou au spawn d'une ville
+    usage: /spawn [ville]
+  home:
+    description: Teleportation a votre domicile
+    usage: /home
+  sethome:
+    description: Definit votre domicile
+    usage: /sethome
+  eco:
+    description: Economie Lesyria Coins
+    usage: /eco <balance|pay|give|take|set>
+  nation:
+    description: Gestion des nations
+    usage: /nation <create|info|invite|join|leave|kick|setcapital|list|disband|deposit|withdraw>
+  city:
+    description: Gestion des villes
+    usage: /city <create|info|list|spawn|setspawn>
+  territory:
+    description: Gestion des territoires
+    usage: /territory <claim|unclaim|info|list|perm|map>
+
+permissions:
+  lesyria.command.help:
+    description: Acces a /lesyria help et /lesyria version
+    default: true
+  lesyria.command.reload:
+    description: Rechargement de la configuration
+    default: op
+  lesyria.command.spawn:
+    description: Acces a /spawn
+    default: true
+  lesyria.command.home:
+    description: Acces a /home et /sethome
+    default: true
+  lesyria.command.eco:
+    description: Acces a /eco balance, /eco pay
+    default: true
+  lesyria.command.eco.admin:
+    description: Acces a /eco give, /eco take, /eco set
+    default: op
+  lesyria.command.nation:
+    description: Acces aux commandes /nation de joueur
+    default: true
+  lesyria.command.nation.admin:
+    description: Acces a l'administration des nations
+    default: op
+  lesyria.command.city:
+    description: Acces aux commandes /city
+    default: true
+  lesyria.command.territory:
+    description: Acces aux commandes /territory
+    default: true
+  lesyria.command.territory.admin:
+    description: Acces a l'administration des territoires
+    default: op
+  lesyria.admin:
+    description: Permission globale d'administration Lesyria
+    default: op
+    children:
+      lesyria.command.reload: true
+      lesyria.command.eco.admin: true
+      lesyria.command.nation.admin: true
+      lesyria.command.territory.admin: true

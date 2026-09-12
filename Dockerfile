@@ -1,162 +1,74 @@
-# ══════════════════════════════════════════════════════════════════════════════
-# ANRD of Republic of Astoria — unified image (dev + production)
-# A single image that supports every role. The entrypoint.sh switches behaviour
-# based on NODE_ENV (development: Next.js dev + Air hot-reload; production:
-# static frontend via http-server + compiled Go binary).
-# ══════════════════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Lesyria - image serveur (Paper + plugin Lesyria)
+#
+#  Deux etapes :
+#    1. builder : compilation du plugin Maven (Java 25) ;
+#    2. runtime : JRE 25 + Paper epingle + plugin.
+#
+#  Le serveur Paper n'est pas telecharge a l'execution : il est epingle par
+#  version et verifie par empreinte SHA-256 au build, ce qui rend l'image
+#  reproductible. Pour changer de version, mettez a jour PAPER_VERSION,
+#  PAPER_BUILD et PAPER_SHA256 (ou les build args de docker compose).
+# ═══════════════════════════════════════════════════════════════════════════════
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Stage 1 — Go builder (API/worker binary + Air for hot-reload)
-# ══════════════════════════════════════════════════════════════════════════════
-FROM golang:1.26-alpine AS go-builder
+# ─── Etape 1 : compilation du plugin ──────────────────────────────────────────
+FROM maven:3.9.16-eclipse-temurin-25 AS plugin-builder
 
-RUN apk add --no-cache gcc musl-dev
+WORKDIR /build
 
-WORKDIR /app
+# Cache des dependances Maven
+COPY pom.xml ./
+RUN mvn -B -q -Dmaven.repo.local=/build/.m2 dependency:go-offline || true
 
-COPY go.mod go.sum ./
-RUN go mod download
+COPY src ./src
 
-RUN go install github.com/air-verse/air@latest
+# Les tests d'integration necessitent Docker : ils sont joues par la CI,
+# pas pendant la construction de l'image.
+RUN mvn -B -Dmaven.repo.local=/build/.m2 clean package -DskipTests
 
-COPY server/ ./server/
+# ─── Etape 2 : runtime Paper ──────────────────────────────────────────────────
+FROM eclipse-temurin:25-jre-noble
 
-RUN CGO_ENABLED=1 GOOS=linux \
-    go build -ldflags="-s -w" -o /app/tmp/aether-server ./server/
+ARG PAPER_VERSION=26.2
+ARG PAPER_BUILD=123
+ARG PAPER_SHA256=7b7b3b43c009103e1971a0576c26f655a7dd9b56a0a2a4438e352c03a7fecd08
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Stage 2 — Node / pnpm (frontend deps + optional static export)
-# ══════════════════════════════════════════════════════════════════════════════
-FROM node:25-alpine AS node-builder
+ENV PAPER_VERSION=${PAPER_VERSION} \
+    PAPER_BUILD=${PAPER_BUILD}
 
-ARG NODE_ENV=production
-ARG BUILD_STATIC
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+        bash \
+        ca-certificates \
+        curl \
+        procps \
+        tzdata \
+ && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# Telechargement verifie du serveur Paper
+RUN mkdir -p /opt/paper \
+ && curl -fsSL -o /opt/paper/paper.jar \
+      "https://fill-data.papermc.io/v1/objects/${PAPER_SHA256}/paper-${PAPER_VERSION}-${PAPER_BUILD}.jar" \
+ && echo "${PAPER_SHA256}  /opt/paper/paper.jar" | sha256sum -c -
 
-RUN npm install -g corepack --force \
-    && corepack enable \
-    && corepack prepare pnpm@9.15.4 --activate
+# Plugin compile + script de demarrage
+COPY --from=plugin-builder /build/target/lesyria.jar /opt/lesyria/lesyria.jar
+COPY entrypoint.sh /opt/lesyria/entrypoint.sh
+RUN chmod +x /opt/lesyria/entrypoint.sh
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
-COPY apps/package.json ./apps/
+# Repertoire de travail persistant : monde, plugins, logs, configurations
+RUN mkdir -p /server/plugins
+WORKDIR /server
+VOLUME ["/server"]
 
-RUN mkdir -p apps/next/fond/google && \
-    printf 'module.exports = {};\n' > apps/next/fond/google/index.js && \
-    printf '{"name":"google","version":"0.0.0"}\n' > apps/next/fond/google/package.json && \
-    pnpm install --filter @anrd-gouv/apps... --no-frozen-lockfile
+# Port Java, port Bedrock (reserve a Geyser, non active en beta),
+# API HTTP publique, RCON
+EXPOSE 25565/tcp
+EXPOSE 25565/udp
+EXPOSE 8080/tcp
+EXPOSE 25575/tcp
 
-COPY apps/ ./apps/
+HEALTHCHECK --start-period=300s --interval=30s --timeout=5s --retries=5 \
+    CMD curl -fsS "http://127.0.0.1:${API_PORT:-8080}/status" >/dev/null || exit 1
 
-RUN     if [ "${BUILD_STATIC:-0}" = "1" ] || { [ -z "${BUILD_STATIC:-}" ] && [ "${NODE_ENV}" = "production" ]; }; then \
-        BUILD_WEB_STATIC=true pnpm --dir apps build:web; \
-    else \
-        echo "Skipping static web export (BUILD_STATIC != 1)"; \
-    fi
-
-# Ensure /app/apps/out always exists (dev builds skip the static export)
-RUN mkdir -p /app/apps/out
-
-# ══════════════════════════════════════════════════════════════════════════════
-# Stage 3 — Prisma client generation
-# ══════════════════════════════════════════════════════════════════════════════
-FROM node:25-alpine AS prisma-builder
-
-ARG DATABASE_URL
-
-WORKDIR /tmp/prisma
-
-COPY server/prisma/package.json ./
-RUN npm install --no-audit --no-fund
-
-COPY server/prisma/schema.prisma server/prisma/prisma.config.ts ./
-
-RUN if [ -n "${DATABASE_URL:-}" ]; then \
-        DATABASE_URL="${DATABASE_URL}" npx prisma generate; \
-    else \
-        echo "DATABASE_URL not provided; skipping Prisma client generation"; \
-    fi
-
-# ══════════════════════════════════════════════════════════════════════════════
-# Stage final — unified runtime (development superset + production runtime)
-# ══════════════════════════════════════════════════════════════════════════════
-FROM node:25-alpine
-
-ARG NODE_ENV=production
-ENV NODE_ENV=${NODE_ENV}
-
-RUN apk add --no-cache \
-    ca-certificates \
-    tzdata \
-    curl \
-    bash \
-    git \
-    wget \
-    build-base \
-    libc6-compat \
-    postgresql \
-    postgresql-client \
-    openssl \
-    npm \
-    gosu \
-    coreutils \
-    inotify-tools \
-    netcat-openbsd
-
-ENV GOPATH="/go"
-ENV PATH="/usr/local/go/bin:/go/bin:/root/go/bin:/root/.local/share/corepack:/usr/local/bin:/usr/bin:/bin:${PATH}"
-ENV SCHEMA_PATH=/app/server/prisma/schema.prisma
-ENV PRISMA_DIR=/app/server/prisma
-ENV DEPLOY_SCRIPT=/usr/local/bin/deploy-schema.sh
-
-RUN npm install -g corepack --force && corepack enable && corepack prepare pnpm@9.15.4 --activate && \
-    ln -sf /root/.local/share/corepack/pnpm /usr/local/bin/pnpm
-
-RUN npm install -g http-server@14
-
-WORKDIR /app
-
-RUN mkdir -p /certs /templates
-
-# ── Go toolchain + Air (dev hot-reload) ─────────────────────────────────────
-COPY --from=go-builder /go/bin/air /go/bin/air
-COPY --from=go-builder /usr/local/go /usr/local/go
-COPY --from=go-builder /app/server/ ./server/
-COPY --from=go-builder /app/tmp/aether-server /app/tmp/aether-server
-COPY --from=go-builder /app/tmp/aether-server /app/server/aether-server
-
-# ── Frontend (node_modules for dev + static export for prod) ────────────────
-COPY --from=node-builder /app/node_modules ./node_modules/
-COPY --from=node-builder /app/apps/node_modules ./apps/node_modules/
-COPY --from=node-builder /app/apps/out ./out
-
-# ── Prisma ──────────────────────────────────────────────────────────────────
-COPY --from=prisma-builder /tmp/prisma/ ./prisma/
-COPY server/prisma/ ./server/prisma/
-RUN cd server/prisma && npm install --no-audit --no-fund
-
-# ── Frontend sources (écrasées par le volume mount en dev) ──────────────────
-COPY apps/package.json         ./apps/
-COPY apps/tsconfig.json        ./apps/
-COPY apps/next.config.ts       ./apps/
-COPY apps/postcss.config.mjs   ./apps/
-COPY apps/components.json      ./apps/
-COPY apps/eslint.config.mjs    ./apps/
-COPY apps/app/                 ./apps/app/
-COPY apps/components/          ./apps/components/
-COPY apps/context/             ./apps/context/
-COPY apps/hooks/               ./apps/hooks/
-COPY apps/lib/                 ./apps/lib/
-COPY apps/public/              ./apps/public/
-COPY apps/middleware.ts        ./apps/middleware.ts
-
-# ── Config ──────────────────────────────────────────────────────────────────
-COPY .air.toml   ./
-COPY .env.example ./
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-EXPOSE 3000
-EXPOSE 8080
-
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/opt/lesyria/entrypoint.sh"]

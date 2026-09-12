@@ -1,0 +1,153 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Lesyria - configuration du serveur (beta)
+#
+#  Ce fichier ne contient QUE de la configuration : tout ce qui est modifiable
+#  par l'equipe de jeu sans recompiler le plugin. La logique metier reste dans
+#  le code Java.
+#
+#  Les variables d'environnement suivantes ont la priorite sur ce fichier :
+#    LESYRIA_DB_HOST / LESYRIA_DB_PORT / LESYRIA_DB_NAME
+#    LESYRIA_DB_USER / LESYRIA_DB_PASSWORD / LESYRIA_DB_POOL_SIZE
+#    DATABASE_URL           (format postgresql://user:pass@host:port/db)
+#    LESYRIA_API_ENABLED / LESYRIA_API_BIND / LESYRIA_API_PORT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+server:
+  # Libelle de version expose par l'API HTTP et /lesyria version
+  version-label: "beta"
+
+# ─── Spawn principal ──────────────────────────────────────────────────────────
+spawn:
+  world: world
+  x: 0.5
+  # Hauteur de repli si snap-to-ground est desactive
+  y: 64.0
+  z: 0.5
+  yaw: 0.0
+  pitch: 0.0
+  # Recale la hauteur sur le premier bloc solide (recommande sur un monde vivant)
+  snap-to-ground: true
+
+# ─── Teleportation ────────────────────────────────────────────────────────────
+teleport:
+  # Delai (secondes) avant une teleportation, annule si le joueur bouge ou est blesse
+  delay-seconds: 3
+  cooldown-seconds: 10
+
+# ─── Economie ─────────────────────────────────────────────────────────────────
+economy:
+  currency-name: "Lesyria Coins"
+  currency-symbol: "LC"
+  # Solde attribue a la creation du profil joueur
+  starting-balance: 100
+  # Montant maximum pour une operation unique (protection anti-abus)
+  max-transaction-amount: 1000000000
+  # Taxe prelevee sur les paiements entre joueurs (pourcentage, 0 = desactive)
+  player-transfer-tax-percent: 0.0
+
+# ─── Territoires ──────────────────────────────────────────────────────────────
+territory:
+  claim:
+    # Rayon en chunks autour du joueur : 1 => carre de 3x3 = 9 chunks
+    radius-chunks: 1
+    # Cout par chunk revendique
+    cost-per-chunk: 100
+  # Limites de securite (memoire de l'index territorial)
+  max-chunks-per-territory: 64
+  max-territories-per-nation: 20
+  # Nom du territoire par defaut : une revendication par defaut cree un
+  # territoire nomme "<nom-nation>-<numero>"
+  # Permissions appliquees a tout nouveau territoire.
+  # Valeurs possibles : NATION, ALLY, PUBLIC, NONE
+  default-permissions:
+    BUILD: NATION
+    BREAK: NATION
+    CONTAINER: NATION
+    INTERACT: NATION
+    PVP: NATION
+    ENTER: PUBLIC
+
+# ─── Nations ──────────────────────────────────────────────────────────────────
+nation:
+  creation-cost: 1000
+  max-members: 50
+  name-min-length: 3
+  name-max-length: 24
+  tag-min-length: 2
+  tag-max-length: 5
+  # Autorise /nation join sans invitation
+  open-join-default: false
+  # Duree de validite d'une invitation (minutes)
+  invite-expire-minutes: 15
+
+# ─── Villes ───────────────────────────────────────────────────────────────────
+city:
+  creation-cost: 500
+  # Distance minimale (chunks) entre deux villes
+  min-distance-chunks: 4
+  # Une ville doit etre fondee dans un territoire de sa nation
+  require-nation-territory: true
+
+# ─── PvP ──────────────────────────────────────────────────────────────────────
+pvp:
+  # PvP autorise hors des territoires revendiques
+  wilderness: true
+  # Empeche les degats entre membres d'une meme nation, partout dans le monde
+  protect-nation-members: true
+
+# ─── Progression ──────────────────────────────────────────────────────────────
+# L'experience est gagnee par des actions reelles et chaque niveau rapporte des
+# coins : la progression a donc un effet economique concret.
+progression:
+  # Coins verses au joueur pour chaque niveau gagne
+  level-up-reward: 25
+  xp:
+    player-kill: 50
+    territory-claim: 100
+    quest-complete: 75
+    shop-trade: 5
+
+# ─── Joueurs ──────────────────────────────────────────────────────────────────
+player:
+  # Frequence d'ecriture en base des statistiques accumulees en memoire
+  # (evite une requete SQL par bloc casse)
+  statistics-persistence-seconds: 300
+
+# ─── Base de donnees ──────────────────────────────────────────────────────────
+database:
+  host: localhost
+  port: 5432
+  name: lesyria
+  user: lesyria
+  password: ""
+  pool-size: 6
+  connection-timeout-ms: 5000
+
+# ─── API HTTP publique (lecture seule) ────────────────────────────────────────
+api:
+  enabled: true
+  # 127.0.0.1 en production (derriere un reverse proxy), 0.0.0.0 en dev Docker
+  bind: 127.0.0.1
+  port: 8080
+  # Origine autorisee pour les appels depuis un navigateur (vide = aucun CORS)
+  cors-origin: ""
+  news:
+    - title: "Bienvenue sur Lesyria"
+      body: "La beta ouverte est disponible : explorez, revendiquez, fondez votre nation."
+      date: "2026-09-12"
+
+# ─── Messages ─────────────────────────────────────────────────────────────────
+messages:
+  # Codes couleur avec le caractere & ; placeholders autour des accolades.
+  prefix: "&8[&6Lesyria&8] &r"
+  first-join:
+    - "&6&lBienvenue sur &e&lLesyria&6&l, &f{player}&6&l !"
+    - ""
+    - "&7Votre solde : &e{balance} &7{currency}"
+    - "&7Utilisez &e/lesyria help &7pour decouvrir les commandes."
+    - "&7Utilisez &e/spawn &7pour rejoindre le centre du monde."
+    - "&7Explorez, revendiquez un territoire, fondez une nation."
+  join:
+    - "&8[&a+&8] &7{player}"
+  quit:
+    - "&8[&c-&8] &7{player}"
